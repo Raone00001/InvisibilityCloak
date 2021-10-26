@@ -5,76 +5,44 @@
 
 # Importing all modules
 import cv2
-import numpy as py
-import time
-
-# Storing/Saving the background into a file
-fourcc = cv2.VideoWriter_fourcc(*'XVID')
-output_file = cv2.VideoWriter('output.avi', fourcc, 20.0, (640,480))
+import numpy as np
 
 # Starting the webcam to read/capture the bg
-cap = cv2.VideoCapture(0)
+video = cv2.VideoCapture(0)
+image = cv2.imread("me.jpeg") 
 
-# Warming up the system
-time.sleep(2)
-bg = 0
+# While this is true
+while True:
+    # Return the frame after being read
+    ret, frame = video.read()
+    # Print
+    print(frame)
+    # Resize the frame and image
+    frame = cv2.resize(frame,(640,480))
+    image = cv2.resize(image, (640,480))
 
-# Capture the bg for 60 frames (for a clearer way)
-for i in range(60):
-    ret,bg = cap.read()
-    
-# Flipping the bg that we captured
-bg = np.flip(bg,axis=1)
+    # Upper and Lower saturation of Black
+    l_black = np.array([30,30, 0])
+    u_black = np.array([104,153, 70])
 
-# Reading the captured frame until the camera is open
-while(cap.isOpened()):
-    ret,img = cap.read()
-    if not ret:
+    # Masking the black parts of the image
+    # Getting the results with the black part
+    mask = cv2.inRange(frame, l_black, u_black)
+    res = cv2.bitwise_and(frame, frame, mask = mask)
+
+    # Total frame
+    f = frame - res
+    f = np.where(f == 0, image, f)
+
+    # Show the users the output of the frame without the black parts
+    # Show the users the mask
+    cv2.imshow("Video", frame)
+    cv2.imshow("Mask", f)
+
+    # If the wait is 1 second and the dimensions are these, then break
+    if cv2.waitKey(1) & 0xFF == ord('q'):
         break
-    img = np.flip(img,axis=1)
 
-    # As we are capturing the frames, we are capturing the colors within the frames. 
-    # So we are going to convert BGR(blue, green, red) to HSV(hue, saturation, value)
-    hsv = cv2.cvtColor(img, cv2.COLOR_BGR2HSV)
-
-    # Generating a mask to detect the red color
-    # Intensity of red
-    lower_red = np.array([0,120,50])
-    upper_red = np.array([10,255,255])
-    # Mask 1     
-    mask1 = cv2.inRange(hsv, lower_red, upper_red)
-
-    lower_red = np.array([170,120,70])
-    upper_red = np.array([180,255,255])
-    # Mask 2     
-    mask2 = cv2.inRange(hsv, lower_red, upper_red)
-
-    # Adding the values and storing it in mask 1
-    mask1 = mask1 + mask2
-
-    # Adding the diluting affect to the image
-    # For that, we will be using morphologyEx(src, dst, op, kernel) 
-    mask_1 = cv2.morphologyEx(mask1, cv2.MORPH_OPEN, np.ones((3, 3), np.uint8))
-    mask_1 = cv2.morphologyEx(mask1, cv2.MORPH_DILATE, np.ones((3, 3), np.uint8))
-
-    # Selecting the part that does not have mask 1
-    mask_2 = cv2.bitwise_not(mask1)
-
-    # Keeping only the part of images without red color
-    res1 = cv2.bitwise_and(img, img, mask=mask_2)
-
-    # Keeping only the part of images red color
-    res2 = cv2.bitwise_and(bg, bg, mask=mask_1)
-
-    # Generating the final output by merging the 2 results
-    final_output = cv2.addWeighted(res1, 1, res2, 1, 0)
-    output_file.write(final_output)
-
-    # Displaying the output to the users
-    cv2.inShow("Magic", final_output)
-    cv2.waitKey(1)
-
-# Releasing
-cap.release()
-out.release()
+# Release the video and destroy all the windows
+video.release()
 cv2.destroyAllWindows()
